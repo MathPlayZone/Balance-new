@@ -53,10 +53,6 @@
                     <label class="block font-bold mb-1 text-slate-300">4. اسم المستودع (Repository)</label>
                     <input type="text" id="cfg-gh-repo" class="input-field" dir="ltr" value="Balance-new">
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block font-bold mb-1 text-slate-300">5. نموذج Gemini (Model ID)</label>
-                    <input type="text" id="cfg-gemini-model" class="input-field" dir="ltr" value="gemini-3.8-flash">
-                </div>
             </div>
 
             <button type="button" id="btn-save-cfg" class="w-full py-2.5 rounded-xl bg-blue-600 font-bold text-xs text-white">حفظ الإعدادات والاتصال ✅</button>
@@ -166,6 +162,331 @@
         </div>
 
         <!-- 4. النشر -->
+        <div class="card p-5 space-y-4 border-emerald-500/30">
+            <button type="button" id="btn-publish" class="w-full py-3.5 rounded-2xl bg-emerald-600 font-black text-sm text-white shadow-lg">🚀 حفظ ونشر على GitHub الآن</button>
+
+            <div id="publish-result" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3 space-y-2">
+                <div class="text-xs font-black text-emerald-300">🎉 تم النشر! الرابط العام الجاهز:</div>
+                <div class="flex gap-2">
+                    <input type="text" id="final-public-url" readonly class="input-field text-xs font-mono text-emerald-200" dir="ltr">
+                    <button type="button" id="btn-copy-url" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs shrink-0">نسخ</button>
+                    <a id="open-final-url" href="#" target="_blank" class="px-3 py-2 rounded-xl bg-white/10 text-white font-bold text-xs shrink-0 flex items-center">فتح ↗</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let projectData = {
+            title: "", grade: "", teacher: "", studentsLabel: "إعداد الطالبات",
+            students: [], defaultTheme: "dark",
+            levels: { "1": { title: "الدرس الأول", questions: [] } }
+        };
+        let activeLessonId = "1";
+        let currentFileSha = null;
+
+        function getSettings() {
+            return {
+                geminiKey: localStorage.getItem('mizan_gemini_key') || '',
+                ghToken: localStorage.getItem('mizan_gh_token') || '',
+                ghUser: localStorage.getItem('mizan_gh_user') || 'MathPlayZone',
+                ghRepo: localStorage.getItem('mizan_gh_repo') || 'Balance-new'
+            };
+        }
+
+        function loadSettings() {
+            const s = getSettings();
+            document.getElementById('cfg-gemini').value = s.geminiKey;
+            document.getElementById('cfg-gh-token').value = s.ghToken;
+            document.getElementById('cfg-gh-user').value = s.ghUser;
+            document.getElementById('cfg-gh-repo').value = s.ghRepo;
+
+            if (s.geminiKey && s.ghToken && s.ghUser && s.ghRepo) {
+                document.getElementById('status-dot').classList.replace('bg-rose-500', 'bg-emerald-500');
+                document.getElementById('settings-panel').classList.add('hidden');
+                loadProjectsFromGitHub();
+            }
+        }
+
+        document.getElementById('btn-toggle-cfg').onclick = () => {
+            document.getElementById('settings-panel').classList.toggle('hidden');
+        };
+
+        document.getElementById('btn-save-cfg').onclick = () => {
+            localStorage.setItem('mizan_gemini_key', document.getElementById('cfg-gemini').value.trim());
+            localStorage.setItem('mizan_gh_token', document.getElementById('cfg-gh-token').value.trim());
+            localStorage.setItem('mizan_gh_user', document.getElementById('cfg-gh-user').value.trim() || 'MathPlayZone');
+            localStorage.setItem('mizan_gh_repo', document.getElementById('cfg-gh-repo').value.trim() || 'Balance-new');
+            loadSettings();
+            alert("تم حفظ الإعدادات بنجاح!");
+        };
+
+        async function loadProjectsFromGitHub() {
+            const s = getSettings();
+            if (!s.ghToken || !s.ghUser || !s.ghRepo) return;
+            const select = document.getElementById('existing-projects');
+            select.innerHTML = '<option value="">جاري الجلب...</option>';
+            try {
+                const res = await fetch(`https://api.github.com/repos/${s.ghUser}/${s.ghRepo}/contents/data?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${s.ghToken}` }
+                });
+                if (!res.ok) {
+                    select.innerHTML = '<option value="">-- لا توجد مشاريع سابقة بعد --</option>';
+                    return;
+                }
+                const files = await res.json();
+                select.innerHTML = '<option value="">-- اختر مشروعاً محفوظاً --</option>';
+                files.forEach(f => {
+                    if (f.name.endsWith('.json')) {
+                        const id = f.name.replace('.json', '');
+                        select.innerHTML += `<option value="${id}">${id}</option>`;
+                    }
+                });
+            } catch (e) {
+                select.innerHTML = '<option value="">-- تعذر الاتصال --</option>';
+            }
+        }
+
+        document.getElementById('btn-refresh-proj').onclick = loadProjectsFromGitHub;
+
+        document.getElementById('existing-projects').onchange = async function() {
+            const id = this.value;
+            if (!id) return;
+            const s = getSettings();
+            try {
+                const res = await fetch(`https://api.github.com/repos/${s.ghUser}/${s.ghRepo}/contents/data/${id}.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${s.ghToken}` }
+                });
+                const fileData = await res.json();
+                currentFileSha = fileData.sha;
+                const binaryStr = atob(fileData.content.replace(/\n/g, ''));
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+                projectData = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+
+                document.getElementById('proj-id').value = id;
+                document.getElementById('proj-title').value = projectData.title || '';
+                document.getElementById('proj-grade').value = projectData.grade || '';
+                document.getElementById('proj-teacher').value = projectData.teacher || '';
+                document.getElementById('proj-theme').value = projectData.defaultTheme || 'dark';
+                document.getElementById('proj-students-label').value = projectData.studentsLabel || 'إعداد الطالبات';
+                document.getElementById('proj-students').value = (projectData.students || []).join('\n');
+
+                activeLessonId = Object.keys(projectData.levels || {})[0] || "1";
+                renderLessonsDropdown();
+                renderQuestionsList();
+                alert(`تم تحميل "${projectData.title}" للتعديل!`);
+            } catch (e) { alert("خطأ في تحميل المشروع"); }
+        };
+
+        document.getElementById('btn-new-proj').onclick = () => {
+            currentFileSha = null;
+            projectData = { title: "", grade: "", teacher: "", studentsLabel: "إعداد الطالبات", students: [], defaultTheme: "dark", levels: { "1": { title: "الدرس الأول", questions: [] } } };
+            activeLessonId = "1";
+            ['existing-projects', 'proj-id', 'proj-title', 'proj-grade', 'proj-teacher', 'proj-students'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('publish-result').classList.add('hidden');
+            renderLessonsDropdown();
+            renderQuestionsList();
+        };
+
+        function renderLessonsDropdown() {
+            const select = document.getElementById('active-lesson-select');
+            select.innerHTML = '';
+            Object.keys(projectData.levels).sort((a, b) => Number(a) - Number(b)).forEach(k => {
+                select.innerHTML += `<option value="${k}" ${k === activeLessonId ? 'selected' : ''}>الدرس ${k}: ${projectData.levels[k].title}</option>`;
+            });
+            document.getElementById('active-lesson-title').value = projectData.levels[activeLessonId]?.title || '';
+        }
+
+        document.getElementById('active-lesson-select').onchange = function() {
+            activeLessonId = this.value;
+            document.getElementById('active-lesson-title').value = projectData.levels[activeLessonId].title;
+            renderQuestionsList();
+        };
+
+        document.getElementById('active-lesson-title').oninput = function() {
+            projectData.levels[activeLessonId].title = this.value;
+            const opt = document.querySelector(`#active-lesson-select option[value="${activeLessonId}"]`);
+            if (opt) opt.textContent = `الدرس ${activeLessonId}: ${this.value}`;
+        };
+
+        document.getElementById('btn-add-lesson').onclick = () => {
+            const keys = Object.keys(projectData.levels).map(Number);
+            const nextId = (keys.length > 0 ? Math.max(...keys) + 1 : 1).toString();
+            projectData.levels[nextId] = { title: `الدرس ${nextId}`, questions: [] };
+            activeLessonId = nextId;
+            renderLessonsDropdown();
+            renderQuestionsList();
+        };
+
+        document.getElementById('btn-del-lesson').onclick = () => {
+            if (Object.keys(projectData.levels).length <= 1) return alert("لا يمكن حذف الدرس الوحيد.");
+            if (confirm("حذف هذا الدرس؟")) {
+                delete projectData.levels[activeLessonId];
+                activeLessonId = Object.keys(projectData.levels)[0];
+                renderLessonsDropdown();
+                renderQuestionsList();
+            }
+        };
+
+        // نظام التبديل التلقائي بين النماذج لتجاوز أوقات الضغط
+        async function callGeminiWithFallback(apiKey, prompt) {
+            const models = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.5-flash'];
+            let lastError = null;
+
+            for (const model of models) {
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            q: { type: "STRING" }, mini: { type: "STRING" },
+                                            options: {
+                                                type: "ARRAY",
+                                                items: {
+                                                    type: "OBJECT",
+                                                    properties: { key: { type: "STRING" }, text: { type: "STRING" }, panText: { type: "STRING" }, value: { type: "STRING" } },
+                                                    required: ["key", "text", "panText", "value"]
+                                                }
+                                            },
+                                            correct: { type: "STRING" }
+                                        },
+                                        required: ["q", "mini", "options", "correct"]
+                                    }
+                                }
+                            }
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        lastError = data.error.message;
+                        continue; // جرب النموذج الاحتياطي التالي تلقائياً
+                    }
+                    return JSON.parse(data.candidates[0].content.parts[0].text);
+                } catch (err) {
+                    lastError = err.message;
+                }
+            }
+            throw new Error(lastError || "جميع النماذج مشغولة حالياً، حاول بعد دقيقة.");
+        }
+
+        document.getElementById('btn-generate-ai').onclick = async () => {
+            const rawText = document.getElementById('raw-questions-input').value.trim();
+            const s = getSettings();
+            if (!s.geminiKey) return alert("أدخل مفتاح Gemini API أولاً.");
+            if (!rawText) return alert("الصق الأسئلة أولاً.");
+
+            const btn = document.getElementById('btn-generate-ai');
+            const status = document.getElementById('ai-status');
+            btn.disabled = true;
+            status.innerText = "⏳ جاري الفرز بالذكاء الاصطناعي...";
+
+            const prompt = `حول النص التالي إلى مصفوفة JSON لأسئلة لعبة تعليمية. لكل سؤال أخرج:
+q (نص السؤال)، mini (عنوان قصير للكفة لا يتجاوز 3 كلمات)، options (4 خيارات: key أ/ب/ج/د، text النص الكامل، panText اختصار كلمتين للكفة، value a/b/c/d)، و correct (a أو b أو c أو d).
+النص:\n${rawText}`;
+
+            try {
+                const generated = await callGeminiWithFallback(s.geminiKey, prompt);
+                projectData.levels[activeLessonId].questions.push(...generated);
+                document.getElementById('raw-questions-input').value = '';
+                status.innerText = `✅ تمت إضافة ${generated.length} سؤالاً!`;
+                renderQuestionsList();
+            } catch (e) {
+                status.innerText = `❌ خطأ: ${e.message}`;
+            } finally { btn.disabled = false; }
+        };
+
+        function renderQuestionsList() {
+            const list = document.getElementById('questions-preview-list');
+            const qs = projectData.levels[activeLessonId]?.questions || [];
+            document.getElementById('questions-count').innerText = qs.length;
+            if (qs.length === 0) {
+                list.innerHTML = '<div class="text-center py-4 text-xs text-slate-500">لا توجد أسئلة بعد.</div>';
+                return;
+            }
+            list.innerHTML = qs.map((item, i) => `
+                <div class="bg-black/30 border border-white/5 rounded-xl p-2.5 text-xs space-y-1.5">
+                    <div class="flex justify-between gap-2">
+                        <span class="font-bold text-white">${i + 1}. ${item.q}</span>
+                        <button type="button" onclick="delQ(${i})" class="text-rose-400 text-[11px]">حذف</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 text-[11px]">
+                        ${item.options.map(o => `<div class="px-2 py-0.5 rounded ${o.value === item.correct ? 'bg-emerald-950/70 text-emerald-300 font-bold' : 'bg-white/5 text-slate-400'}">${o.key}) ${o.text}</div>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.delQ = (i) => { projectData.levels[activeLessonId].questions.splice(i, 1); renderQuestionsList(); };
+        document.getElementById('btn-clear-q').onclick = () => { if (confirm("مسح كل الأسئلة؟")) { projectData.levels[activeLessonId].questions = []; renderQuestionsList(); } };
+
+        document.getElementById('btn-publish').onclick = async () => {
+            const s = getSettings();
+            const projId = document.getElementById('proj-id').value.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+            if (!s.ghToken || !s.ghUser || !s.ghRepo) return alert("أكمل إعدادات GitHub أولاً.");
+            if (!projId) return alert("اكتب معرّف الرابط بالإنجليزية.");
+
+            projectData.title = document.getElementById('proj-title').value.trim() || "لعبة الميزان";
+            projectData.grade = document.getElementById('proj-grade').value.trim();
+            projectData.teacher = document.getElementById('proj-teacher').value.trim();
+            projectData.defaultTheme = document.getElementById('proj-theme').value;
+            projectData.studentsLabel = document.getElementById('proj-students-label').value.trim() || "إعداد الطالبات";
+            projectData.students = document.getElementById('proj-students').value.split('\n').map(l => l.trim()).filter(Boolean);
+
+            const btn = document.getElementById('btn-publish');
+            btn.disabled = true; btn.innerText = "⏳ جاري النشر...";
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${s.ghUser}/${s.ghRepo}/contents/data/${projId}.json`;
+                if (!currentFileSha) {
+                    const check = await fetch(`${apiUrl}?t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${s.ghToken}` } });
+                    if (check.ok) currentFileSha = (await check.json()).sha;
+                }
+                const utf8Bytes = new TextEncoder().encode(JSON.stringify(projectData, null, 2));
+                let binary = ''; utf8Bytes.forEach(b => binary += String.fromCharCode(b));
+                const body = { message: `Update ${projId}`, content: btoa(binary) };
+                if (currentFileSha) body.sha = currentFileSha;
+
+                const up = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${s.ghToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const upData = await up.json();
+                if (!up.ok) throw new Error(upData.message);
+                currentFileSha = upData.content.sha;
+
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const pubUrl = `${baseUrl}/index.html?id=${projId}`;
+                document.getElementById('final-public-url').value = pubUrl;
+                document.getElementById('open-final-url').href = pubUrl;
+                document.getElementById('publish-result').classList.remove('hidden');
+                loadProjectsFromGitHub();
+            } catch (e) { alert("خطأ في النشر: " + e.message); }
+            finally { btn.disabled = false; btn.innerText = "🚀 حفظ ونشر على GitHub الآن"; }
+        };
+
+        document.getElementById('btn-copy-url').onclick = () => {
+            const inp = document.getElementById('final-public-url');
+            inp.select(); navigator.clipboard.writeText(inp.value);
+            alert("تم نسخ الرابط العام!");
+        };
+
+        loadSettings();
+        renderLessonsDropdown();
+        renderQuestionsList();
+    </script>
+</body>
+</html>
+      <!-- 4. النشر -->
         <div class="card p-5 space-y-4 border-emerald-500/30">
             <button type="button" id="btn-publish" class="w-full py-3.5 rounded-2xl bg-emerald-600 font-black text-sm text-white shadow-lg">🚀 حفظ ونشر على GitHub الآن</button>
 
