@@ -194,8 +194,10 @@
         const _s = [169,32,77,97,116,104,80,108,97,121,90,111,110,101];
         const _g = () => String.fromCharCode(..._s);
         let _v = false;
+        let _obs = null;
 
         function _m() {
+            if (_obs) _obs.disconnect();
             const id = '_wm_' + _s[2];
             let el = document.getElementById(id);
             if (!el) {
@@ -203,9 +205,11 @@
                 el.id = id;
                 document.body.appendChild(el);
             }
-            el.setAttribute('style', 'position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.6px;pointer-events:none;z-index:9999;direction:ltr;font-family:sans-serif;display:block !important;visibility:visible !important;opacity:1 !important;');
+            const targetStyle = 'position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.6px;pointer-events:none;z-index:9999;direction:ltr;font-family:sans-serif;display:block;visibility:visible;opacity:1;';
+            if (el.getAttribute('style') !== targetStyle) el.setAttribute('style', targetStyle);
             if (el.textContent !== _g()) el.textContent = _g();
             _v = (el.textContent === _g());
+            if (_obs) _obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
         }
 
         let CONFIG = {
@@ -225,8 +229,8 @@
         let currentFileSha = null;
 
         function initConfig() {
+            _obs = new MutationObserver(_m);
             _m();
-            new MutationObserver(_m).observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
             if (!_v) return;
 
             localStorage.removeItem('mizan_or_key');
