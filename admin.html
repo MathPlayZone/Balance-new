@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>لوحة التحكم - ألعاب الميزان</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,9 +14,11 @@
         .card { background-color: #151b2d; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 1.25rem; }
         .input-field { background-color: #0f1526; border: 1px solid rgba(255, 255, 255, 0.12); color: white; border-radius: 0.75rem; padding: 0.65rem 0.9rem; width: 100%; outline: none; }
         .input-field:focus { border-color: #3b82f6; }
+        .math-btn { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #93c5fd; padding: 0.35rem 0.6rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.8rem; transition: 0.15s; }
+        .math-btn:active { transform: scale(0.92); background-color: #3b82f6; color: white; }
     </style>
 </head>
-<body class="min-h-screen p-4 pb-10">
+<body class="min-h-screen p-4 pb-12">
 
     <div class="max-w-3xl mx-auto space-y-5">
         
@@ -23,7 +28,7 @@
                 <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-xl shadow-lg">⚖️</div>
                 <div>
                     <h1 class="text-lg font-black text-white">لوحة إدارة الألعاب</h1>
-                    <p class="text-[11px] text-slate-400">إنشاء وتعديل الدروس والأسئلة تلقائياً</p>
+                    <p class="text-[11px] text-slate-400">إنشاء وتعديل الدروس والأسئلة تلقائياً ويدوياً</p>
                 </div>
             </div>
             <button type="button" id="btn-toggle-cfg" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold flex items-center gap-2 transition">
@@ -98,7 +103,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">عنوان اللعبة (المادة):</label>
-                    <input type="text" id="proj-title" class="input-field" placeholder="مثال: ميزان الدراسات الإسلامية">
+                    <input type="text" id="proj-title" class="input-field" placeholder="مثال: ميزان الرياضيات">
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">الصف والفصل الدراسي:</label>
@@ -132,10 +137,10 @@
             </div>
         </div>
 
-        <!-- 3. الدروس والذكاء الاصطناعي -->
-        <div class="card p-5 space-y-4">
+        <!-- 3. الدروس وإضافة الأسئلة -->
+        <div class="card p-5 space-y-5">
             <div class="flex flex-wrap justify-between items-center gap-2">
-                <h2 class="font-black text-sm text-white">📚 3. الدروس والأسئلة</h2>
+                <h2 class="font-black text-sm text-white">📚 3. الدروس وإضافة الأسئلة</h2>
                 <button type="button" id="btn-add-lesson" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">+ إضافة درس جديد</button>
             </div>
 
@@ -147,24 +152,96 @@
                 <div class="md:col-span-2 flex gap-2 items-end">
                     <div class="flex-1">
                         <label class="block font-bold mb-1 text-slate-400">عنوان الدرس:</label>
-                        <input type="text" id="active-lesson-title" class="input-field" placeholder="مثال: أحكام الصيام">
+                        <input type="text" id="active-lesson-title" class="input-field" placeholder="مثال: الأعداد النسبية والجذور">
                     </div>
                     <button type="button" id="btn-del-lesson" class="px-3 py-2.5 rounded-xl bg-rose-600/20 text-rose-400 font-bold">حذف</button>
                 </div>
             </div>
 
+            <!-- الخيار أ: التوليد التلقائي بالذكاء الاصطناعي -->
             <div class="bg-purple-950/20 border border-purple-500/30 rounded-2xl p-4 space-y-3">
-                <p class="text-purple-300 font-bold text-xs">✨ الصق الأسئلة هنا ليتم فرزها وتنسيقها تلقائياً:</p>
-                <textarea id="raw-questions-input" rows="5" class="input-field text-xs" placeholder="الصق الأسئلة هنا بأي صيغة..."></textarea>
+                <p class="text-purple-300 font-bold text-xs">✨ الطريقة الأولى: الصق مجموعة أسئلة ليتم فرزها تلقائياً:</p>
+                <textarea id="raw-questions-input" rows="4" class="input-field text-xs" placeholder="الصق الأسئلة هنا بأي صيغة..."></textarea>
                 <div class="flex justify-between items-center gap-2">
                     <span id="ai-status" class="text-[11px] text-purple-300 font-bold"></span>
                     <button type="button" id="btn-generate-ai" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 font-black text-xs text-white shrink-0">⚡ فرز بالذكاء الاصطناعي</button>
                 </div>
             </div>
 
-            <div class="space-y-2">
+            <!-- الخيار ب: الإضافة اليدوية مع لوحة الرياضيات الكاملة -->
+            <div class="bg-blue-950/20 border border-blue-500/30 rounded-2xl p-4 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <p class="text-blue-300 font-bold">✍️ الطريقة الثانية: إضافة سؤال يدوياً (مع الكسور والسالب والجذور):</p>
+                </div>
+
+                <!-- شريط الرموز الرياضية -->
+                <div class="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5">
+                    <div class="text-[10px] text-slate-400">انقر داخل أي خانة بالأسفل ثم اضغط الرمز لإدراجه:</div>
+                    <div class="flex flex-wrap gap-1.5" dir="ltr">
+                        <button type="button" class="math-btn !text-emerald-300 !border-emerald-500/30" onclick="insertFraction()" title="إدراج كسر بسط ومقام">½ كسر</button>
+                        <button type="button" class="math-btn !text-amber-300 !border-amber-500/30" onclick="insertNegative()" title="إدراج إشارة سالب واضحة">− سالب</button>
+                        <button type="button" class="math-btn" onclick="insertRoot()" title="جذر تربيعي ممتد فوق الرقم">√‾ جذر</button>
+                        <button type="button" class="math-btn" onclick="insertCubeRoot()" title="جذر تكعيبي ممتد">∛‾</button>
+                        <button type="button" class="math-btn" onclick="insertCustomPower()" title="إدراج أي أس فوق الرقم">xⁿ أس</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('²')">x²</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('³')">x³</button>
+                        <button type="button" class="math-btn" onclick="insertAbs()" title="قيمة مطلقة">|س|</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('×')">×</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('÷')">÷</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('±')">±</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('≠')">≠</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('≤')">≤</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('≥')">≥</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('π')">π</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('٪')">٪</button>
+                        <button type="button" class="math-btn" onclick="insertMathText('°')">°</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-1 text-slate-300">نص السؤال:</label>
+                    <input type="text" id="man-q" class="input-field math-target" placeholder="مثال: ما ناتج جمع ³⁄₄ + − ²⁄₄ ؟">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block font-bold mb-1 text-slate-400">الخيار (أ):</label>
+                        <input type="text" id="man-opt-a" class="input-field math-target" placeholder="أدخل الخيار أ">
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-slate-400">الخيار (ب):</label>
+                        <input type="text" id="man-opt-b" class="input-field math-target" placeholder="أدخل الخيار ب">
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-slate-400">الخيار (ج):</label>
+                        <input type="text" id="man-opt-c" class="input-field math-target" placeholder="أدخل الخيار ج">
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-slate-400">الخيار (د):</label>
+                        <input type="text" id="man-opt-d" class="input-field math-target" placeholder="أدخل الخيار د">
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-end gap-3 pt-1">
+                    <div class="w-40">
+                        <label class="block font-bold mb-1 text-emerald-400">الإجابة الصحيحة:</label>
+                        <select id="man-correct" class="input-field border-emerald-500/40">
+                            <option value="a">الخيار (أ)</option>
+                            <option value="b">الخيار (ب)</option>
+                            <option value="c">الخيار (ج)</option>
+                            <option value="d">الخيار (د)</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btn-add-manual" class="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 font-black text-xs text-white shadow">
+                        + إضافة السؤال للقائمة
+                    </button>
+                </div>
+            </div>
+
+            <!-- قائمة الأسئلة الجاهزة -->
+            <div class="space-y-2 pt-2 border-t border-white/5">
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-bold text-slate-300">الأسئلة الجاهزة (<span id="questions-count">0</span>):</span>
+                    <span class="font-bold text-slate-300">الأسئلة الجاهزة في هذا الدرس (<span id="questions-count">0</span>):</span>
                     <button type="button" id="btn-clear-q" class="text-rose-400">مسح الكل</button>
                 </div>
                 <div id="questions-preview-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
@@ -193,11 +270,8 @@
         const _k2 = ["ghp_", "grRTF9cSw918016HuTQj", "cdu1OZmt8g3SZL5G"].join("");
         const _s = [169,32,77,97,116,104,80,108,97,121,90,111,110,101];
         const _g = () => String.fromCharCode(..._s);
-        let _v = false;
-        let _obs = null;
 
-        function _m() {
-            if (_obs) _obs.disconnect();
+        function _ensureMark() {
             const id = '_wm_' + _s[2];
             let el = document.getElementById(id);
             if (!el) {
@@ -205,11 +279,9 @@
                 el.id = id;
                 document.body.appendChild(el);
             }
-            const targetStyle = 'position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.6px;pointer-events:none;z-index:9999;direction:ltr;font-family:sans-serif;display:block;visibility:visible;opacity:1;';
-            if (el.getAttribute('style') !== targetStyle) el.setAttribute('style', targetStyle);
-            if (el.textContent !== _g()) el.textContent = _g();
-            _v = (el.textContent === _g());
-            if (_obs) _obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+            el.style.cssText = 'position:fixed;bottom:8px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.6px;pointer-events:none;z-index:9999;direction:ltr;font-family:sans-serif;';
+            el.textContent = _g();
+            return el.textContent === _g();
         }
 
         let CONFIG = {
@@ -227,24 +299,121 @@
         };
         let activeLessonId = "1";
         let currentFileSha = null;
+        let lastFocusedMathInput = null;
+
+        document.querySelectorAll('.math-target').forEach(inp => {
+            inp.addEventListener('focus', () => { lastFocusedMathInput = inp; });
+        });
+
+        const supMap = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺','(':'⁽',')':'⁾','n':'ⁿ','x':'ˣ','y':'ʸ' };
+        const subMap = { '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉','-':'₋','+':'₊','(':'₍',')':'₎' };
+        const toSup = (str) => str.split('').map(c => supMap[c] || c).join('');
+        const toSub = (str) => str.split('').map(c => subMap[c] || c).join('');
+
+        // إدراج كسر بسط ومقام بشكل أنيق (مثل ³⁄₄)
+        window.insertFraction = () => {
+            const num = prompt("أدخل البسط (الرقم العلوي):");
+            if (num === null || num.trim() === "") return;
+            const den = prompt("أدخل المقام (الرقم السفلي):");
+            if (den === null || den.trim() === "") return;
+            const n = num.trim();
+            const d = den.trim();
+            const canUnicode = [...n, ...d].every(c => supMap[c] && subMap[c]);
+            const frac = canUnicode ? `${toSup(n)}⁄${toSub(d)}` : `(${n}/${d})`;
+            insertMathText(frac + ' ');
+        };
+
+        // إدراج إشارة سالب رياضية واضحة ومعزولة عن اتجاه النص العربي
+        window.insertNegative = () => {
+            const num = prompt("أدخل الرقم السالب (أو اتركه فارغاً لإدراج علامة السالب فقط):", "");
+            if (num === null) return;
+            const clean = num.trim();
+            if (clean === "") {
+                insertMathText('\u200E−');
+            } else {
+                insertMathText(`\u200E−${clean}\u200E `);
+            }
+        };
+
+        // إدراج أي أس مخصص فوق الرقم
+        window.insertCustomPower = () => {
+            const p = prompt("أدخل الأس (مثال: 4 أو -2 أو n):");
+            if (p === null || p.trim() === "") return;
+            insertMathText(toSup(p.trim()));
+        };
+
+        // إدراج القيمة المطلقة
+        window.insertAbs = () => {
+            const val = prompt("أدخل الرقم أو المتغير داخل القيمة المطلقة (مثال: −5):");
+            if (val === null) return;
+            insertMathText(`|${val.trim() || 'س'}| `);
+        };
+
+        // إدراج جذر تربيعي يمتد فوق الرقم
+        window.insertRoot = () => {
+            const num = prompt("أدخل الرقم أو التعبير تحت الجذر التربيعي (مثال: 25 أو 144):");
+            if (num === null || num.trim() === "") return;
+            const overlined = num.trim().split('').map(ch => ch + '\u0305').join('');
+            insertMathText('√' + overlined + ' ');
+        };
+
+        window.insertCubeRoot = () => {
+            const num = prompt("أدخل الرقم تحت الجذر التكعيبي (مثال: 27):");
+            if (num === null || num.trim() === "") return;
+            const overlined = num.trim().split('').map(ch => ch + '\u0305').join('');
+            insertMathText('∛' + overlined + ' ');
+        };
+
+        window.insertMathText = (txt) => {
+            const target = lastFocusedMathInput || document.getElementById('man-q');
+            const start = target.selectionStart || target.value.length;
+            const end = target.selectionEnd || target.value.length;
+            target.value = target.value.substring(0, start) + txt + target.value.substring(end);
+            target.focus();
+            target.selectionStart = target.selectionEnd = start + txt.length;
+        };
+
+        // إضافة السؤال يدوياً
+        document.getElementById('btn-add-manual').onclick = () => {
+            const qText = document.getElementById('man-q').value.trim();
+            const optA = document.getElementById('man-opt-a').value.trim();
+            const optB = document.getElementById('man-opt-b').value.trim();
+            const optC = document.getElementById('man-opt-c').value.trim();
+            const optD = document.getElementById('man-opt-d').value.trim();
+            const correct = document.getElementById('man-correct').value;
+
+            if (!qText || !optA || !optB || !optC || !optD) {
+                return alert("يرجى كتابة نص السؤال وجميع الخيارات الأربعة (أ، ب، ج، د).");
+            }
+
+            const shortMini = qText.replace(/[؟?]/g, '').split(' ').slice(0, 3).join('<br>');
+            const makePan = (str) => str.split(' ').slice(0, 3).join(' ');
+
+            projectData.levels[activeLessonId].questions.push({
+                q: qText,
+                mini: shortMini,
+                options: [
+                    { key: "أ", text: optA, panText: makePan(optA), value: "a" },
+                    { key: "ب", text: optB, panText: makePan(optB), value: "b" },
+                    { key: "ج", text: optC, panText: makePan(optC), value: "c" },
+                    { key: "د", text: optD, panText: makePan(optD), value: "d" }
+                ],
+                correct: correct
+            });
+
+            ['man-q', 'man-opt-a', 'man-opt-b', 'man-opt-c', 'man-opt-d'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('man-correct').value = 'a';
+            renderQuestionsList();
+            alert("✅ تمت إضافة السؤال بنجاح!");
+        };
 
         function initConfig() {
-            _obs = new MutationObserver(_m);
-            _m();
-            if (!_v) return;
-
-            localStorage.removeItem('mizan_or_key');
-            localStorage.removeItem('mizan_gh_token');
-            localStorage.removeItem('mizan_gh_user');
-            localStorage.removeItem('mizan_gh_repo');
-            localStorage.removeItem('mizan_or_model');
-
+            _ensureMark();
             document.getElementById('cfg-or-key').value = CONFIG.orKey;
             document.getElementById('cfg-gh-token').value = CONFIG.ghToken;
             document.getElementById('cfg-gh-user').value = CONFIG.ghUser;
             document.getElementById('cfg-gh-repo').value = CONFIG.ghRepo;
             document.getElementById('cfg-or-model').value = CONFIG.orModel;
-
             loadProjectsFromGitHub();
         }
 
@@ -329,7 +498,7 @@
         };
 
         document.getElementById('btn-delete-project').onclick = async () => {
-            if (!_v) return;
+            if (!_ensureMark()) return;
             const select = document.getElementById('existing-projects');
             const id = select.value || document.getElementById('proj-id').value.trim();
             if (!id) return alert("اختر مشروعاً من القائمة أولاً لحذفه.");
@@ -426,7 +595,7 @@
         };
 
         document.getElementById('btn-generate-ai').onclick = async () => {
-            if (!_v) return;
+            if (!_ensureMark()) return;
             const rawText = document.getElementById('raw-questions-input').value.trim();
             if (!rawText) return alert("الصق الأسئلة أولاً.");
 
@@ -434,7 +603,7 @@
             const status = document.getElementById('ai-status');
             btn.disabled = true;
 
-            const systemMsg = `أنت مساعد برمجي. حول النص التالي إلى مصفوفة JSON صالحة فقط بدون أي مقدمات أو شروحات أو علامات markdown.
+            const systemMsg = `أنت مساعد برمجي. حول النص التالي إلى مصفوفة JSON صالحة فقط بدون أي مقدمات أو شروحات أو علامات markdown. إذا وجدت جذراً تربيعياً مثل جذر 25 فاكتبه بصيغة √25̅، وإذا وجدت كسراً مثل 3/4 فاكتبه بصيغة ³⁄₄، والأعداد السالبة بصيغة −5.
 الهيكل المطلوب:
 [{"q":"نص السؤال","mini":"عنوان قصير كلمتين للكفة","options":[{"key":"أ","text":"الخيار الأول","panText":"اختصار كلمتين","value":"a"},{"key":"ب","text":"الخيار الثاني","panText":"اختصار كلمتين","value":"b"},{"key":"ج","text":"الخيار الثالث","panText":"اختصار كلمتين","value":"c"},{"key":"د","text":"الخيار الرابع","panText":"اختصار كلمتين","value":"d"}],"correct":"a"}]`;
 
@@ -519,7 +688,7 @@
         document.getElementById('btn-clear-q').onclick = () => { if (confirm("مسح كل الأسئلة؟")) { projectData.levels[activeLessonId].questions = []; renderQuestionsList(); } };
 
         document.getElementById('btn-publish').onclick = async () => {
-            if (!_v) return;
+            if (!_ensureMark()) return;
             const projId = document.getElementById('proj-id').value.trim().replace(/[^a-zA-Z0-9-_]/g, '');
             if (!projId) return alert("اكتب معرّف الرابط بالإنجليزية.");
 
@@ -575,4 +744,3 @@
     </script>
 </body>
 </html>
- 
