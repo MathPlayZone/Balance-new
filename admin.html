@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - مولّد ألعاب الميزان</title>
+    <title>لوحة التحكم - مولّد ألعاب الميزان (OpenRouter)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -22,8 +22,8 @@
             <div class="flex items-center gap-3">
                 <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-xl">⚖️</div>
                 <div>
-                    <h1 class="text-lg font-black text-white">لوحة التحكم الأوتوماتيكية</h1>
-                    <p class="text-[11px] text-slate-400">إنشاء وتعديل ألعاب الميزان بالذكاء الاصطناعي</p>
+                    <h1 class="text-lg font-black text-white">لوحة التحكم (OpenRouter)</h1>
+                    <p class="text-[11px] text-slate-400">فرز بالذكاء الاصطناعي + نشر تلقائي على GitHub</p>
                 </div>
             </div>
             <button type="button" id="btn-toggle-cfg" class="px-3 py-2 rounded-xl bg-white/10 text-xs font-bold flex items-center gap-2">
@@ -38,12 +38,12 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div>
-                    <label class="block font-bold mb-1 text-slate-300">1. مفتاح Gemini API</label>
-                    <input type="password" id="cfg-gemini" class="input-field" dir="ltr" placeholder="الصق مفتاح Gemini هنا...">
+                    <label class="block font-bold mb-1 text-slate-300">1. مفتاح OpenRouter API</label>
+                    <input type="password" id="cfg-or-key" class="input-field" dir="ltr" placeholder="sk-or-v1-...">
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">2. مفتاح GitHub Token</label>
-                    <input type="password" id="cfg-gh-token" class="input-field" dir="ltr" placeholder="الصق توكن ghp_ هنا...">
+                    <input type="password" id="cfg-gh-token" class="input-field" dir="ltr" placeholder="ghp_...">
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">3. اسم حساب GitHub</label>
@@ -54,8 +54,8 @@
                     <input type="text" id="cfg-gh-repo" class="input-field" dir="ltr" value="Balance-new">
                 </div>
                 <div class="md:col-span-2">
-                    <label class="block font-bold mb-1 text-slate-300">5. اسم النموذج (Model)</label>
-                    <input type="text" id="cfg-gemini-model" class="input-field" dir="ltr" value="gemini-3.8-flash">
+                    <label class="block font-bold mb-1 text-slate-300">5. النموذج المفضل في OpenRouter</label>
+                    <input type="text" id="cfg-or-model" class="input-field" dir="ltr" value="google/gemini-2.0-flash-exp:free">
                 </div>
             </div>
 
@@ -148,11 +148,11 @@
             </div>
 
             <div class="bg-purple-950/20 border border-purple-500/30 rounded-2xl p-4 space-y-3">
-                <p class="text-purple-300 font-bold text-xs">✨ الصق الأسئلة العشوائية هنا وسيفرزها الذكاء الاصطناعي فوراً:</p>
-                <textarea id="raw-questions-input" rows="4" class="input-field text-xs" placeholder="الصق الأسئلة هنا بأي صيغة..."></textarea>
+                <p class="text-purple-300 font-bold text-xs">✨ الصق الأسئلة العشوائية هنا وسيفرزها OpenRouter فوراً:</p>
+                <textarea id="raw-questions-input" rows="5" class="input-field text-xs" placeholder="الصق الأسئلة هنا بأي صيغة..."></textarea>
                 <div class="flex justify-between items-center gap-2">
                     <span id="ai-status" class="text-[11px] text-purple-300 font-bold"></span>
-                    <button type="button" id="btn-generate-ai" class="px-5 py-2.5 rounded-xl bg-purple-600 font-black text-xs text-white shrink-0">⚡ فرز وإضافة تلقائياً</button>
+                    <button type="button" id="btn-generate-ai" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 font-black text-xs text-white shrink-0">⚡ فرز عبر OpenRouter</button>
                 </div>
             </div>
 
@@ -191,23 +191,23 @@
 
         function getSettings() {
             return {
-                geminiKey: localStorage.getItem('mizan_gemini_key') || '',
+                orKey: localStorage.getItem('mizan_or_key') || '',
                 ghToken: localStorage.getItem('mizan_gh_token') || '',
                 ghUser: localStorage.getItem('mizan_gh_user') || 'MathPlayZone',
                 ghRepo: localStorage.getItem('mizan_gh_repo') || 'Balance-new',
-                geminiModel: localStorage.getItem('mizan_gemini_model') || 'gemini-3.8-flash'
+                orModel: localStorage.getItem('mizan_or_model') || 'google/gemini-2.0-flash-exp:free'
             };
         }
 
         function loadSettings() {
             const s = getSettings();
-            document.getElementById('cfg-gemini').value = s.geminiKey;
+            document.getElementById('cfg-or-key').value = s.orKey;
             document.getElementById('cfg-gh-token').value = s.ghToken;
             document.getElementById('cfg-gh-user').value = s.ghUser;
             document.getElementById('cfg-gh-repo').value = s.ghRepo;
-            document.getElementById('cfg-gemini-model').value = s.geminiModel;
+            document.getElementById('cfg-or-model').value = s.orModel;
 
-            if (s.geminiKey && s.ghToken && s.ghUser && s.ghRepo) {
+            if (s.orKey && s.ghToken && s.ghUser && s.ghRepo) {
                 document.getElementById('status-dot').classList.replace('bg-rose-500', 'bg-emerald-500');
                 document.getElementById('settings-panel').classList.add('hidden');
                 loadProjectsFromGitHub();
@@ -217,13 +217,13 @@
         document.getElementById('btn-toggle-cfg').onclick = () => document.getElementById('settings-panel').classList.toggle('hidden');
 
         document.getElementById('btn-save-cfg').onclick = () => {
-            localStorage.setItem('mizan_gemini_key', document.getElementById('cfg-gemini').value.trim());
+            localStorage.setItem('mizan_or_key', document.getElementById('cfg-or-key').value.trim());
             localStorage.setItem('mizan_gh_token', document.getElementById('cfg-gh-token').value.trim());
             localStorage.setItem('mizan_gh_user', document.getElementById('cfg-gh-user').value.trim() || 'MathPlayZone');
             localStorage.setItem('mizan_gh_repo', document.getElementById('cfg-gh-repo').value.trim() || 'Balance-new');
-            localStorage.setItem('mizan_gemini_model', document.getElementById('cfg-gemini-model').value.trim() || 'gemini-3.8-flash');
+            localStorage.setItem('mizan_or_model', document.getElementById('cfg-or-model').value.trim() || 'google/gemini-2.0-flash-exp:free');
             loadSettings();
-            alert("تم حفظ الإعدادات!");
+            alert("تم حفظ الإعدادات بنجاح!");
         };
 
         async function loadProjectsFromGitHub() {
@@ -331,80 +331,76 @@
             }
         };
 
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-        async function callGeminiWithRetry(apiKey, model, prompt, statusEl) {
-            const maxAttempts = 3;
-            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            q: { type: "STRING" }, mini: { type: "STRING" },
-                                            options: {
-                                                type: "ARRAY",
-                                                items: {
-                                                    type: "OBJECT",
-                                                    properties: { key: { type: "STRING" }, text: { type: "STRING" }, panText: { type: "STRING" }, value: { type: "STRING" } },
-                                                    required: ["key", "text", "panText", "value"]
-                                                }
-                                            },
-                                            correct: { type: "STRING" }
-                                        },
-                                        required: ["q", "mini", "options", "correct"]
-                                    }
-                                }
-                            }
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.error) {
-                        if (attempt < maxAttempts && (data.error.code === 503 || data.error.code === 429 || data.error.message.includes('demand'))) {
-                            statusEl.innerText = `⏳ ضغط مؤقت على السيرفر.. إعادة المحاولة (${attempt}/${maxAttempts})...`;
-                            await sleep(2500);
-                            continue;
-                        }
-                        throw new Error(data.error.message);
-                    }
-                    return JSON.parse(data.candidates[0].content.parts[0].text);
-                } catch (e) {
-                    if (attempt === maxAttempts) throw e;
-                    await sleep(2000);
-                }
-            }
-        }
-
+        // الاتصال بـ OpenRouter مع التبديل التلقائي بين النماذج المجانية
         document.getElementById('btn-generate-ai').onclick = async () => {
             const rawText = document.getElementById('raw-questions-input').value.trim();
             const s = getSettings();
-            if (!s.geminiKey) return alert("أدخل مفتاح Gemini API أولاً.");
+            if (!s.orKey) return alert("أدخل مفتاح OpenRouter API في الإعدادات أولاً.");
             if (!rawText) return alert("الصق الأسئلة أولاً.");
 
             const btn = document.getElementById('btn-generate-ai');
             const status = document.getElementById('ai-status');
             btn.disabled = true;
-            status.innerText = "⚡ جاري الفرز...";
 
-            const prompt = `حول النص التالي إلى مصفوفة JSON لأسئلة لعبة تعليمية. لكل سؤال: q (السؤال)، mini (عنوان قصير للكفة كلمتين)، options (4 خيارات: key أ/ب/ج/د، text النص الكامل، panText اختصار كلمتين، value a/b/c/d)، و correct (a أو b أو c أو d).\nالنص:\n${rawText}`;
+            const systemMsg = `أنت مساعد برمجي. حول النص التالي إلى مصفوفة JSON صالحة فقط بدون أي مقدمات أو شروحات أو علامات markdown.
+الهيكل المطلوب:
+[{"q":"نص السؤال","mini":"عنوان قصير كلمتين للكفة","options":[{"key":"أ","text":"الخيار الأول","panText":"اختصار كلمتين","value":"a"},{"key":"ب","text":"الخيار الثاني","panText":"اختصار كلمتين","value":"b"},{"key":"ج","text":"الخيار الثالث","panText":"اختصار كلمتين","value":"c"},{"key":"د","text":"الخيار الرابع","panText":"اختصار كلمتين","value":"d"}],"correct":"a"}]`;
 
-            try {
-                const generated = await callGeminiWithRetry(s.geminiKey, s.geminiModel, prompt, status);
-                projectData.levels[activeLessonId].questions.push(...generated);
-                document.getElementById('raw-questions-input').value = '';
-                status.innerText = `✅ تمت إضافة ${generated.length} سؤالاً!`;
-                renderQuestionsList();
-            } catch (e) {
-                status.innerText = `❌ ${e.message}`;
-            } finally { btn.disabled = false; }
+            const fallbackModels = [
+                s.orModel,
+                'meta-llama/llama-3.3-70b-instruct:free',
+                'qwen/qwen-2.5-72b-instruct:free',
+                'openrouter/free'
+            ];
+            // إزالة التكرار
+            const modelsToTry = [...new Set(fallbackModels)];
+            let lastError = "";
+
+            for (const model of modelsToTry) {
+                try {
+                    status.innerText = `⏳ جاري الفرز عبر (${model.split('/')[1] || model})...`;
+                    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${s.orKey}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': window.location.origin,
+                            'X-Title': 'Mizan Game Generator'
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [
+                                { role: 'system', content: systemMsg },
+                                { role: 'user', content: rawText }
+                            ]
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (data.error) {
+                        lastError = data.error.message;
+                        continue;
+                    }
+
+                    let content = data.choices[0].message.content;
+                    // استخراج مصفوفة JSON بدقة حتى لو أضاف النموذج نصاً قبلها أو بعدها
+                    const jsonMatch = content.match(/\[[\s\S]*\]/);
+                    if (!jsonMatch) throw new Error("لم يرجع النموذج صيغة JSON صحيحة");
+
+                    const generated = JSON.parse(jsonMatch[0]);
+                    projectData.levels[activeLessonId].questions.push(...generated);
+                    document.getElementById('raw-questions-input').value = '';
+                    status.innerText = `✅ تمت إضافة ${generated.length} سؤالاً بنجاح!`;
+                    renderQuestionsList();
+                    btn.disabled = false;
+                    return;
+                } catch (err) {
+                    lastError = err.message;
+                }
+            }
+
+            status.innerText = `❌ خطأ: ${lastError}`;
+            btn.disabled = false;
         };
 
         function renderQuestionsList() {
