@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="page-title">ميزان الدراسات الإسلامية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0f1e;
+            --panel-color: #151b2d;
+            --secondary-bg: #1f2943;
+            --accent-color: #3b82f6;
+            --text-main: #ffffff;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            height: 100dvh;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* حركات الميزان */
+        @keyframes swing {
+            0%, 100% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+        }
+
+        .animate-swing { animation: swing 2s ease-in-out infinite; }
+        .beam-transition { transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pan-counter-rotation { transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* الحلقات الملحومة الثابتة على العارضة */
+        .welded-ring {
+            width: 11px; height: 11px;
+            background: #4a5568; border: 2px solid #cbd5e0;
+            border-radius: 50%; position: absolute; top: 50%;
+            transform: translateY(-50%); z-index: 50;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.8);
+            display: flex; justify-content: center;
+        }
+
+        .integrated-cord {
+            width: 1.5px; height: 56px;
+            background: #718096; position: absolute;
+            top: 7px; z-index: 10;
+        }
+
+        /* تنسيق الألوان */
+        .theme-container {
+            display: flex; gap: 6px; justify-content: center;
+            padding: 4px 8px; background: rgba(0,0,0,0.3);
+            border-radius: 50px; border: 1px solid rgba(255,255,255,0.08);
+            width: fit-content; margin: 0 auto;
+        }
+
+        .theme-dot {
+            width: 16px; height: 16px; border-radius: 50%;
+            cursor: pointer; border: 2px solid rgba(255,255,255,0.4);
+            transition: transform 0.2s; flex-shrink: 0;
+        }
+        .theme-dot:active { transform: scale(1.3); }
+
+        .screen { display: none; height: 100%; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        .btn-fancy {
+            background: linear-gradient(135deg, var(--accent-color), #1d4ed8);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .score-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            padding: 4px 10px; border-radius: 10px;
+            font-weight: 900; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; gap: 4px;
+            font-size: 11px; flex-shrink: 0;
+        }
+
+        /* توسيط تام وثابت لنصوص الكفتين */
+        .pan-text-centered {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            line-height: 1.25;
+            padding: 0 2px;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        * { touch-action: manipulation; }
+
+        .stages-list {
+            flex: 1; overflow-y: auto; padding: 10px;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <!-- شاشة التحميل السريعة -->
+    <div id="loading-overlay" class="fixed inset-0 z-[700] bg-[var(--bg-color)] flex flex-col items-center justify-center text-white transition-opacity duration-300">
+        <div class="w-16 h-16 bg-[var(--accent-color)] rounded-2xl flex items-center justify-center mb-3 shadow-xl animate-bounce">
+            <span class="text-3xl">⚖️</span>
+        </div>
+        <p class="text-xs font-bold text-slate-300">جاري تجهيز الميزان...</p>
+    </div>
+
+    <!-- شاشة البداية -->
+    <div id="screen-home" class="screen active justify-between items-center p-5 text-center overflow-y-auto no-scrollbar">
+        <div class="theme-container mt-1 shrink-0" id="home-themes"></div>
+
+        <div class="my-auto py-3 w-full max-w-xs flex flex-col items-center">
+            <div class="mb-5 w-full flex flex-col items-center">
+                <div class="w-20 h-20 bg-[var(--accent-color)] rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-2xl animate-bounce">
+                    <span class="text-4xl" id="game-icon">⚖️</span>
+                </div>
+                <h1 id="game-title" class="text-2xl sm:text-3xl font-black mb-1 tracking-tighter text-white">ميزان الدراسات الإسلامية</h1>
+                <div id="game-grade" class="text-xs text-blue-400 font-bold mb-1">الصف الثاني متوسط - الترم الأول</div>
+                <div id="game-teacher" class="text-[11px] text-slate-300 font-bold">بإشراف المعلمة: أ. أسماء رشيد الرشيد</div>
+            </div>
+
+            <div class="space-y-3.5 w-full">
+                <button onclick="showScreen('screen-stages')" class="btn-fancy w-full py-3 rounded-2xl font-black text-lg active:scale-95 transition-transform text-white">ابدأ اللعب</button>
+                
+                <div id="students-card" class="p-3.5 bg-white/[0.04] rounded-3xl border border-white/10 backdrop-blur-md shadow-xl">
+                    <div class="flex items-center justify-center gap-2 mb-2.5">
+                        <span class="h-[1px] w-6 bg-white/15"></span>
+                        <span id="students-label" class="text-[11px] text-slate-400 font-bold">إعداد الطالبات</span>
+                        <span class="h-[1px] w-6 bg-white/15"></span>
+                    </div>
+                    <div id="students-list" class="flex flex-col gap-1.5 text-[11px] font-bold text-blue-100"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="h-1 shrink-0"></div>
+    </div>
+
+    <!-- شاشة المراحل -->
+    <div id="screen-stages" class="screen p-4">
+        <div class="flex justify-between items-center mb-4 text-white">
+            <button onclick="showScreen('screen-home')" class="text-slate-400 text-xs font-bold bg-white/5 px-3 py-1.5 rounded-lg">← القائمة</button>
+            <div class="theme-container !m-0" id="stages-themes"></div>
+            <div class="score-badge">
+                <span id="global-score-display">٠</span>
+                <span>⭐</span>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <div id="stages-grade-label" class="text-xs font-black text-blue-300">الصف الثاني متوسط - الترم الأول</div>
+            <h2 class="text-xl font-black text-white mt-0.5">اختر الدرس</h2>
+        </div>
+
+        <div class="stages-list no-scrollbar text-white max-w-md w-full mx-auto" id="stages-grid"></div>
+    </div>
+
+    <!-- شاشة اللعبة -->
+    <div id="screen-game" class="screen">
+        <!-- الشريط العلوي المدمج -->
+        <div class="px-3 py-2 flex justify-between items-center bg-[var(--panel-color)] border-b border-white/5 z-[150] shrink-0 text-white gap-2">
+            <button onclick="showScreen('screen-stages')" class="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-xs z-[160] shrink-0">🔙</button>
+            
+            <div class="theme-container !p-1 !gap-1.5 !bg-black/25 shrink-0" id="game-themes"></div>
+
+            <div class="score-badge !py-1 !px-2.5 !text-xs shrink-0">
+                <span id="score">٠</span>
+                <span>⭐</span>
+            </div>
+        </div>
+
+        <!-- شريط المعلمة والصف -->
+        <div class="flex justify-between items-center px-3 py-1 bg-black/20 border-b border-white/5 text-[10px] text-blue-200 font-bold shrink-0">
+            <div id="game-bar-grade" class="font-black tracking-wide">ثاني متوسط - الترم الأول</div>
+            <div id="game-bar-teacher" class="font-black text-slate-300">إشراف: أ. أسماء رشيد الرشيد</div>
+        </div>
+
+        <!-- منطقة السؤال والميزان المتناسق بالمنتصف -->
+        <div class="flex-1 relative flex flex-col items-center justify-center p-2 min-h-0">
+            <!-- صندوق السؤال العلوي -->
+            <div class="bg-[var(--panel-color)] border border-[var(--accent-color)]/30 rounded-2xl p-2.5 w-full max-w-[330px] shadow-lg text-center shrink-0 mb-2">
+                <div id="current-stage-title" class="text-[var(--accent-color)] text-[10px] font-bold mb-0.5 tracking-wider"></div>
+                <div id="top-question-text" class="text-xs sm:text-sm font-black text-white leading-relaxed"></div>
+            </div>
+
+            <!-- هيكل الميزان المتناسق مع العمود الثابت -->
+            <div class="relative w-full max-w-[260px] h-[145px] flex justify-center items-center shrink-0">
+                <!-- قاعدة الميزان -->
+                <div class="absolute bottom-1 w-28 h-2.5 bg-[var(--secondary-bg)] rounded-full"></div>
+                <!-- عمود الميزان الرأسي الثابت -->
+                <div class="absolute bottom-2 w-2.5 h-28 bg-gradient-to-t from-slate-700 via-slate-600 to-slate-400 rounded-full shadow"></div>
+                <!-- المفصل الدائري المركزي -->
+                <div class="absolute top-[16px] w-5 h-5 bg-slate-200 rounded-full z-[60] border-[3px] border-slate-600 shadow-md"></div>
+
+                <!-- عارضة الميزان والكفات الملحومة -->
+                <div id="beam-wrapper" class="absolute top-[24px] w-full beam-transition z-30" style="transform: rotate(-10deg); transform-origin: center center;">
+                    <div class="w-full h-1.5 bg-gradient-to-b from-slate-300 to-slate-600 rounded-full relative shadow">
+                        <!-- كفة المسألة (اليسرى) -->
+                        <div class="welded-ring left-[7%]">
+                            <div id="pan-left-container" class="pan-counter-rotation flex flex-col items-center" style="transform: rotate(10deg); transform-origin: center 6px;">
+                                <div class="integrated-cord !h-[52px]"></div>
+                                <div class="w-24 min-h-[58px] px-1.5 bg-[var(--panel-color)] border-2 border-blue-500/40 rounded-b-[28px] flex flex-col items-center justify-center p-1 shadow-2xl backdrop-blur-sm translate-y-[52px]">
+                                    <span class="text-[7px] text-blue-400 font-black mb-0.5 opacity-70">الموضوع</span>
+                                    <div id="pan-question-mini" class="pan-text-centered text-[9.5px] font-black text-white"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- كفة الاختيار (اليمنى) -->
+                        <div class="welded-ring right-[7%]">
+                            <div id="pan-right-container" class="pan-counter-rotation flex flex-col items-center" style="transform: rotate(10deg); transform-origin: center 6px;">
+                                <div class="integrated-cord !h-[52px]"></div>
+                                <div id="answer-box" class="w-24 min-h-[58px] px-1.5 bg-[var(--panel-color)] border-2 border-emerald-500/20 rounded-b-[28px] flex flex-col items-center justify-center p-1 shadow-2xl backdrop-blur-sm translate-y-[52px]">
+                                    <span class="text-[7px] text-emerald-400 font-black mb-0.5 opacity-70">اختيارك</span>
+                                    <div id="answer-text" class="pan-text-centered text-[9.5px] font-black text-white">؟</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="feedback" class="h-4 flex items-center justify-center text-[11px] font-black shrink-0 mt-1"></div>
+        </div>
+
+        <!-- لوحة الخيارات السفلية (4 خيارات: أ / ب / ج / د) -->
+        <div class="bg-[var(--panel-color)] p-2.5 pb-4 rounded-t-[1.8rem] border-t border-white/5 shadow-2xl shrink-0 z-[120]">
+            <div class="flex justify-between items-center mb-1.5 px-1 max-w-sm mx-auto">
+                <span class="text-slate-400 text-[10px] font-bold">السؤال <span id="q-idx-label">١</span> / <span id="total-q-label">١٥</span></span>
+                <span class="text-slate-400 text-[10px] font-bold">انقري لاختيار الإجابة وموازنة الكفة</span>
+            </div>
+
+            <!-- أزرار الخيارات أ / ب / ج / د -->
+            <div class="space-y-1.5 mb-2.5 max-w-sm mx-auto" id="options-container"></div>
+
+            <div class="flex gap-2 max-w-sm mx-auto">
+                <button onclick="clearSelection()" class="w-1/4 h-10 bg-slate-700/50 hover:bg-slate-700/80 rounded-xl font-bold text-xs active:scale-95 border border-white/5 text-white">إلغاء</button>
+                <button id="check-btn" onclick="checkAnswer()" class="flex-1 h-10 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md border border-white/10 text-white" disabled>تحقق من التوازن ⚖️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة الفوز بالمرحلة -->
+    <div id="win-modal" class="fixed inset-0 z-[600] hidden items-center justify-center p-6 bg-black/95 backdrop-blur-xl text-white">
+        <div class="text-center p-6 w-full max-w-sm">
+            <div class="text-6xl mb-4 animate-bounce">🏆</div>
+            <h2 class="text-3xl font-black mb-2 text-white">أحسنتِ! عمل رائع</h2>
+            <p id="win-message" class="text-slate-300 text-sm mb-8 leading-relaxed">لقد أتممتِ جميع أسئلة الدرس بنجاح وتفوق ✨</p>
+            <button onclick="closeWinModalAndGoBack()" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-black text-base shadow-xl w-full active:scale-95">العودة للدروس</button>
+        </div>
+    </div>
+
+    <script>
+        // دالة تحويل الأرقام إلى عربية
+        const toAr = (n) => n.toString().replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+
+        // ثيمات الألوان
+        const themes = {
+            dark: { bg: '#0a0f1e', panel: '#151b2d', secondary: '#1f2943', accent: '#3b82f6' },
+            royal: { bg: '#2e1065', panel: '#4c1d95', secondary: '#5b21b6', accent: '#a78bfa' },
+            emerald: { bg: '#064e3b', panel: '#065f46', secondary: '#047857', accent: '#34d399' },
+            rose: { bg: '#831843', panel: '#9d174d', secondary: '#be123c', accent: '#fb7185' },
+            midnight: { bg: '#1e1b4b', panel: '#312e81', secondary: '#3730a3', accent: '#6366f1' },
+            sunset: { bg: '#7c2d12', panel: '#9a3412', secondary: '#af3a03', accent: '#fb923c' },
+            ocean: { bg: '#0c4a6e', panel: '#075985', secondary: '#0369a1', accent: '#38bdf8' },
+            lavender: { bg: '#4c1d95', panel: '#5b21b6', secondary: '#6d28d9', accent: '#c084fc' }
+        };
+
+        // البيانات الافتراضية (تعمل إذا لم يُحدد رابط خاص)
+        const defaultGameData = {
+            title: "ميزان الدراسات الإسلامية",
+            grade: "الصف الثاني متوسط - الترم الأول",
+            teacher: "أ. أسماء رشيد الرشيد",
+            studentsLabel: "إعداد الطالبات",
+            students: [
+                "نبراس محمد آل بن سعيد",
+                "نبأ مؤيد لباد",
+                "زهراء التكية",
+                "فاطمة خالد الجارودي",
+                "خاتون علي العسيف"
+            ],
+            levels: {
+                "1": {
+                    title: "أحكام الصيام ومفسداته",
+                    questions: [
+                        {
+                            q: "متى فُرض صيام رمضان؟",
+                            mini: "فرضية صيام<br>رمضان",
+                            options: [
+                                { key: "أ", text: "في السنة الأولى من الهجرة.", panText: "السنة الأولى", value: "a" },
+                                { key: "ب", text: "في السنة الثانية من الهجرة.", panText: "السنة الثانية", value: "b" },
+                                { key: "ج", text: "في السنة الثالثة من الهجرة.", panText: "السنة الثالثة", value: "c" },
+                                { key: "د", text: "في السنة الرابعة من الهجرة.", panText: "السنة الرابعة", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "متى يبدأ الصيام ومتى ينتهي؟",
+                            mini: "وقت الصيام<br>اليومي",
+                            options: [
+                                { key: "أ", text: "من شروق الشمس إلى غروب الشمس.", panText: "الشروق للغروب", value: "a" },
+                                { key: "ب", text: "من طلوع الفجر إلى غروب الشمس.", panText: "الفجر للغروب", value: "b" },
+                                { key: "ج", text: "من منتصف الليل إلى طلوع الفجر.", panText: "الليل للفجر", value: "c" },
+                                { key: "د", text: "من طلوع الشمس إلى منتصف الليل.", panText: "الشمس لليل", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "لماذا فرض الله تعالى الصيام؟",
+                            mini: "الحكمة من<br>الصيام",
+                            options: [
+                                { key: "أ", text: "الاقتداء بالأمم السابقة.", panText: "الاقتداء بالأمم", value: "a" },
+                                { key: "ب", text: "صحة أبداننا.", panText: "صحة الأبدان", value: "b" },
+                                { key: "ج", text: "تقوى الله جل وعلا بالاستجابة لأمره واجتناب نهيه.", panText: "تقوى الله", value: "c" },
+                                { key: "د", text: "التسلية وقضاء وقت الفراغ.", panText: "قضاء الفراغ", value: "d" }
+                            ],
+                            correct: "c"
+                        },
+                        {
+                            q: "بيّن النبي ﷺ أن للصائم فرحتان، فما هما؟",
+                            mini: "فرحتا<br>الصائم",
+                            options: [
+                                { key: "أ", text: "فرحة عند صيامه وفرحة عند نومه.", panText: "صيامه ونومه", value: "a" },
+                                { key: "ب", text: "فرحة عند فطره وفرحة عند لقاء ربه.", panText: "فطره ولقاء ربه", value: "b" },
+                                { key: "ج", text: "فرحة عند السحور وفرحة عند العيد.", panText: "السحور والعيد", value: "c" },
+                                { key: "د", text: "فرحة عند دخول رمضان وفرحة عند انتهائه.", panText: "دخوله وانتهائه", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "قال تعالى: ﴿وَكُلُوا وَاشْرَبُوا حَتَّىٰ يَتَبَيَّنَ لَكُمُ الْخَيْطُ الْأَبْيَضُ مِنَ الْخَيْطِ الْأَسْوَدِ مِنَ الْفَجْرِ ثُمَّ أَتِمُّوا الصِّيَامَ إِلَى اللَّيْلِ﴾<br>ما نوع مفسدات الصيام التي ذُكرت في الآية الكريمة؟",
+                            mini: "مفسدات الصيام<br>في الآية",
+                            options: [
+                                { key: "أ", text: "النوم والأكل.", panText: "النوم والأكل", value: "a" },
+                                { key: "ب", text: "الأكل والشرب.", panText: "الأكل والشرب", value: "b" },
+                                { key: "ج", text: "الكذب والغيبة.", panText: "الكذب والغيبة", value: "c" },
+                                { key: "د", text: "الغضب والخصام.", panText: "الغضب والخصام", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "مَن أكل وهو شاكٌّ في طلوع الفجر، ثم تبيّن له أنه قد طلع الفجر، فلماذا يكون صيامه صحيحًا؟",
+                            mini: "الشك في<br>طلوع الفجر",
+                            options: [
+                                { key: "أ", text: "لأن الأصل بقاء الليل.", panText: "بقاء الليل", value: "a" },
+                                { key: "ب", text: "لأن الأكل لا يُفسد الصيام.", panText: "لا يفسد الصيام", value: "b" },
+                                { key: "ج", text: "لأنه نسي وقت الصيام.", panText: "نسي الوقت", value: "c" },
+                                { key: "د", text: "لأن الصيام يبدأ بعد شروق الشمس.", panText: "بعد الشروق", value: "d" }
+                            ],
+                            correct: "a"
+                        },
+                        {
+                            q: "مَن هم الذين يُباح لهم الفطر في رمضان، ويجب عليهم الكفارة؟",
+                            mini: "الفطر مع<br>وجوب الكفارة",
+                            options: [
+                                { key: "أ", text: "المسافر والمريض مرضًا مؤقتًا.", panText: "المسافر والمريض", value: "a" },
+                                { key: "ب", text: "المريض مرضًا لا يُتوقع شفاؤه، وكبير السن الذي لا يستطيع الصيام.", panText: "المريض المزمن والكبير", value: "b" },
+                                { key: "ج", text: "الحامل والمرضع.", panText: "الحامل والمرضع", value: "c" },
+                                { key: "د", text: "من يتعب من العمل.", panText: "المتعب من العمل", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "مَن أكل أو شرب وهو شاكٌّ في غروب الشمس، ثم تبيّن له أنها لم تغرب، فلماذا صومه غير صحيح ووجب عليه القضاء؟",
+                            mini: "الشك في<br>غروب الشمس",
+                            options: [
+                                { key: "أ", text: "لأن الأصل بقاء الليل.", panText: "بقاء الليل", value: "a" },
+                                { key: "ب", text: "لأن الأصل بقاء النهار.", panText: "بقاء النهار", value: "b" },
+                                { key: "ج", text: "لأن الأكل لا يُفسد الصيام.", panText: "لا يفسد الصيام", value: "c" },
+                                { key: "د", text: "لأن الصيام ينتهي عند العصر.", panText: "ينتهي بالعصر", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "شخص تعمد القيء أثناء الصيام دون عذر، فما حكم صيامه؟",
+                            mini: "حكم تعمد<br>القيء",
+                            options: [
+                                { key: "أ", text: "صحيح ولا شيء عليه.", panText: "صحيح", value: "a" },
+                                { key: "ب", text: "يفسد صومه وعليه القضاء.", panText: "يفسد وعليه القضاء", value: "b" },
+                                { key: "ج", text: "يجب عليه صيام شهرين.", panText: "صيام شهرين", value: "c" },
+                                { key: "د", text: "يصح مع الكراهة.", panText: "يصح مع الكراهة", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "أي الحالات الآتية يُباح لها الفطر في رمضان بسبب العذر؟",
+                            mini: "الأعذار المبيحة<br>للفطر",
+                            options: [
+                                { key: "أ", text: "شخص صحيح لا يرغب في الصيام.", panText: "لا يرغب بالصيام", value: "a" },
+                                { key: "ب", text: "مسافر سفرًا يبيح الفطر.", panText: "السفر المبيح", value: "b" },
+                                { key: "ج", text: "طالب لديه اختبار.", panText: "طالب لديه اختبار", value: "c" },
+                                { key: "د", text: "شخص يريد النوم نهارًا.", panText: "يريد النوم نهاراً", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "لماذا يُستحب الإكثار من الدعاء في رمضان؟",
+                            mini: "استحباب الدعاء<br>في رمضان",
+                            options: [
+                                { key: "أ", text: "لأن الدعاء لا يكون إلا في رمضان.", panText: "لا يكون إلا برمضان", value: "a" },
+                                { key: "ب", text: "لأن رمضان موسم عظيم للطاعة والعبادة.", panText: "موسم للطاعة والعبادة", value: "b" },
+                                { key: "ج", text: "لأن الدعاء يغني عن الصيام.", panText: "يغني عن الصيام", value: "c" },
+                                { key: "د", text: "لأن الدعاء واجب في كل ساعة.", panText: "واجب كل ساعة", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "ما المقصود بمفسدات الصيام؟",
+                            mini: "مفهوم مفسدات<br>الصيام",
+                            options: [
+                                { key: "أ", text: "الأمور التي تزيد الأجر.", panText: "تزيد الأجر", value: "a" },
+                                { key: "ب", text: "الأمور التي تُبطل الصيام.", panText: "تُبطل الصيام", value: "b" },
+                                { key: "ج", text: "الأمور المستحبة للصائم.", panText: "المستحبة للصائم", value: "c" },
+                                { key: "د", text: "الأمور التي لا تؤثر في الصيام.", panText: "لا تؤثر بالصيام", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "ما حكم من احتلم وهو صائم؟",
+                            mini: "حكم الاحتلام<br>للصائم",
+                            options: [
+                                { key: "أ", text: "يفسد صومه.", panText: "يفسد صومه", value: "a" },
+                                { key: "ب", text: "لا يفسد صومه.", panText: "لا يفسد صومه", value: "b" },
+                                { key: "ج", text: "يجب عليه القضاء.", panText: "يجب القضاء", value: "c" },
+                                { key: "د", text: "يجب عليه الكفارة.", panText: "تجب الكفارة", value: "d" }
+                            ],
+                            correct: "b"
+                        },
+                        {
+                            q: "أيٌّ مما يلي لا يفسد الصيام؟",
+                            mini: "لا يفسد<br>الصيام",
+                            options: [
+                                { key: "أ", text: "الشرب عمدًا.", panText: "الشرب عمداً", value: "a" },
+                                { key: "ب", text: "الأكل عمدًا.", panText: "الأكل عمداً", value: "b" },
+                                { key: "ج", text: "تعمّد القيء.", panText: "تعمّد القيء", value: "c" },
+                                { key: "د", text: "الأكل ناسيًا.", panText: "الأكل ناسياً", value: "d" }
+                            ],
+                            correct: "d"
+                        },
+                        {
+                            q: "ما حكم من تعمّد القيء؟",
+                            mini: "حكم متعمّد<br>القيء",
+                            options: [
+                                { key: "أ", text: "لا يؤثر في الصيام.", panText: "لا يؤثر", value: "a" },
+                                { key: "ب", text: "يفسد صومه.", panText: "يفسد صومه", value: "b" },
+                                { key: "ج", text: "يزيد أجره.", panText: "يزيد أجره", value: "c" },
+                                { key: "د", text: "يجب عليه إكمال الطعام.", panText: "إكمال الطعام", value: "d" }
+                            ],
+                            correct: "b"
+                        }
+                    ]
+                }
+            }
+        };
+
+        let levelsData = defaultGameData.levels;
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('id') || 'default';
+        const storageKey = `islamicScale_${gameId}_V1`;
+
+        window.score = 0;
+        window.unlockedStages = [1];
+        let currentLevel = "1", qIdx = 0, selectedOption = null, isCorrect = false;
+
+        // تطبيق البيانات على الواجهة
+        function applyGameData(data) {
+            document.title = data.title || "لعبة الميزان";
+            document.getElementById('game-title').innerText = data.title || "لعبة الميزان";
+            document.getElementById('game-grade').innerText = data.grade || "";
+            document.getElementById('stages-grade-label').innerText = data.grade || "";
+            document.getElementById('game-bar-grade').innerText = data.grade || "";
+
+            const teacherText = data.teacher ? `بإشراف المعلمة: ${data.teacher}` : "";
+            const teacherShort = data.teacher ? `إشراف: ${data.teacher}` : "";
+            document.getElementById('game-teacher').innerText = teacherText;
+            document.getElementById('game-bar-teacher').innerText = teacherShort;
+
+            const studentsCard = document.getElementById('students-card');
+            const studentsList = document.getElementById('students-list');
+            if (data.students && data.students.length > 0) {
+                studentsCard.style.display = 'block';
+                document.getElementById('students-label').innerText = data.studentsLabel || "إعداد الطالبات";
+                studentsList.innerHTML = data.students.map(s => 
+                    `<div class="py-1.5 px-3 rounded-xl bg-white/[0.04] border border-white/5">${s}</div>`
+                ).join('');
+            } else {
+                studentsCard.style.display = 'none';
+            }
+
+            levelsData = data.levels || {};
+            if (data.defaultTheme && themes[data.defaultTheme]) {
+                setTheme(data.defaultTheme);
+            }
+        }
+
+        // جلب البيانات من ملف JSON إذا وجد معرف في الرابط
+        async function initGame() {
+            if (gameId !== 'default') {
+                try {
+                    // منع الكاش لضمان ظهور التحديثات الفورية
+                    const response = await fetch(`data/${gameId}.json?t=${Date.now()}`);
+                    if (response.ok) {
+                        const remoteData = await response.json();
+                        applyGameData(remoteData);
+                    } else {
+                        applyGameData(defaultGameData);
+                    }
+                } catch (e) {
+                    console.error("فشل تحميل ملف الدرس:", e);
+                    applyGameData(defaultGameData);
+                }
+            } else {
+                applyGameData(defaultGameData);
+            }
+
+            loadProgress();
+            fillThemes();
+            updateScale();
+
+            const loader = document.getElementById('loading-overlay');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 300);
+        }
+
+        // إدارة التخزين المحلي
+        function saveProgress() {
+            localStorage.setItem(storageKey, JSON.stringify({ score: window.score, unlocked: window.unlockedStages }));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    window.score = data.score || 0;
+                    window.unlockedStages = data.unlocked || [1];
+                } catch(e) {
+                    window.score = 0;
+                    window.unlockedStages = [1];
+                }
+            }
+            updateGlobalScore(window.score);
+            renderStages();
+        }
+
+        function fillThemes() {
+            ['home-themes', 'stages-themes', 'game-themes'].forEach(id => {
+                const bar = document.getElementById(id);
+                if (!bar) return;
+                bar.innerHTML = '';
+                Object.keys(themes).forEach(t => {
+                    bar.innerHTML += `<div onclick="setTheme('${t}')" class="theme-dot" style="background: ${themes[t].bg}"></div>`;
+                });
+            });
+        }
+
+        function setTheme(n) {
+            const t = themes[n]; const r = document.documentElement;
+            r.style.setProperty('--bg-color', t.bg); r.style.setProperty('--panel-color', t.panel);
+            r.style.setProperty('--secondary-bg', t.secondary); r.style.setProperty('--accent-color', t.accent);
+            updateScale();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'screen-stages') {
+                updateGlobalScore(window.score);
+                renderStages();
+            }
+        }
+
+        function renderStages() {
+            const grid = document.getElementById('stages-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            const keys = Object.keys(levelsData).sort((a, b) => parseInt(a) - parseInt(b));
+            keys.forEach(id => {
+                const title = levelsData[id].title;
+                const qCount = levelsData[id].questions ? levelsData[id].questions.length : 0;
+                
+                grid.innerHTML += `
+                    <div onclick="startLevel('${id}')" class="bg-[var(--panel-color)] p-4 rounded-2xl border-2 border-[var(--accent-color)]/50 flex justify-between items-center active:scale-95 transition-all mb-3 cursor-pointer shadow-md">
+                        <div>
+                            <h3 class="font-black text-base text-white">الدرس ${toAr(id)}: ${title}</h3>
+                            <p class="text-[10px] text-emerald-400 font-bold mt-0.5">
+                                مفتوح وجاهز (${toAr(qCount)} سؤالاً)
+                            </p>
+                        </div>
+                        <span class="text-[var(--accent-color)] text-lg font-bold">▶</span>
+                    </div>
+                `;
+            });
+
+            // خانة تشويقية للدرس القادم
+            const nextNum = keys.length + 1;
+            grid.innerHTML += `
+                <div class="bg-[var(--panel-color)]/20 p-4 rounded-2xl border-2 border-dashed border-white/5 flex justify-between items-center opacity-40 mb-3 cursor-default">
+                    <div>
+                        <h3 class="font-black text-base text-slate-500">الدرس ${toAr(nextNum)}: قريباً..</h3>
+                    </div>
+                    <span class="text-slate-600 text-lg">⏳</span>
+                </div>
+            `;
+        }
+
+        function updateGlobalScore(s) {
+            document.getElementById('global-score-display').innerText = toAr(s);
+            const sEl = document.getElementById('score');
+            if (sEl) sEl.innerText = toAr(s);
+        }
+
+        function startLevel(id) {
+            if (!levelsData[id]) return;
+            currentLevel = id; qIdx = 0;
+            document.getElementById('current-stage-title').innerText = levelsData[id].title;
+            document.getElementById('total-q-label').innerText = toAr(levelsData[id].questions.length);
+            loadQuestion();
+            showScreen('screen-game');
+        }
+
+        function loadQuestion() {
+            selectedOption = null; isCorrect = false;
+            const q = levelsData[currentLevel].questions[qIdx];
+            document.getElementById('top-question-text').innerHTML = q.q;
+            document.getElementById('pan-question-mini').innerHTML = q.mini;
+            document.getElementById('q-idx-label').innerText = toAr(qIdx + 1);
+            
+            const ansBox = document.getElementById('answer-box');
+            if (ansBox) ansBox.classList.replace('border-emerald-500', 'border-emerald-500/20');
+            
+            document.getElementById('feedback').innerHTML = '';
+            renderOptions(q.options);
+            updateScale();
+        }
+
+        function renderOptions(options) {
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-2 rounded-xl border border-white/10 bg-[var(--secondary-bg)] hover:bg-white/10 flex justify-between items-center transition-all text-white text-right gap-2";
+                btn.onclick = () => selectOption(opt);
+                btn.id = `opt-btn-${opt.value}`;
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <span class="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[11px] font-black text-amber-400 shrink-0">${opt.key}</span>
+                        <span class="text-[11px] font-bold leading-snug">${opt.text}</span>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectOption(opt) {
+            if (isCorrect) return;
+            selectedOption = opt;
+            
+            const container = document.getElementById('options-container');
+            Array.from(container.children).forEach(b => {
+                b.classList.remove('border-blue-500', 'bg-blue-600/20');
+            });
+            const activeBtn = document.getElementById(`opt-btn-${opt.value}`);
+            if (activeBtn) activeBtn.classList.add('border-blue-500', 'bg-blue-600/20');
+
+            updateScale();
+        }
+
+        function clearSelection() {
+            if (isCorrect) return;
+            selectedOption = null;
+            const container = document.getElementById('options-container');
+            Array.from(container.children).forEach(b => b.classList.remove('border-blue-500', 'bg-blue-600/20'));
+            updateScale();
+        }
+
+        function updateScale() {
+            const beam = document.getElementById('beam-wrapper');
+            const panL = document.getElementById('pan-left-container');
+            const panR = document.getElementById('pan-right-container');
+            const answerDisplay = document.getElementById('answer-text');
+            const btn = document.getElementById('check-btn');
+            if (!beam || !btn) return;
+
+            if (selectedOption) {
+                answerDisplay.innerHTML = selectedOption.panText || selectedOption.text;
+            } else {
+                answerDisplay.innerHTML = "؟";
+            }
+
+            let tilt = -10;
+
+            if (selectedOption && !isCorrect) {
+                tilt = 8;
+                btn.disabled = false;
+                btn.style.background = 'var(--accent-color)';
+                btn.style.borderColor = 'rgba(255,255,255,0.3)';
+                btn.style.color = 'white';
+                btn.innerText = "تحقق من التوازن ⚖️";
+            } else if (isCorrect) {
+                tilt = 0;
+                btn.disabled = true;
+                btn.style.background = '#059669';
+                btn.style.borderColor = '#10b981';
+                btn.innerText = "متوازن تماماً! ✅";
+            } else {
+                tilt = -10;
+                btn.disabled = true;
+                btn.style.background = 'var(--secondary-bg)';
+                btn.style.borderColor = 'rgba(255,255,255,0.05)';
+                btn.style.color = 'rgba(255,255,255,0.25)';
+                btn.innerText = "تحقق من التوازن ⚖️";
+            }
+
+            beam.style.transform = `rotate(${tilt}deg)`;
+            panL.style.transform = `rotate(${-tilt}deg)`;
+            panR.style.transform = `rotate(${-tilt}deg)`;
+        }
+
+        function checkAnswer() {
+            if (!selectedOption) return;
+            const q = levelsData[currentLevel].questions[qIdx];
+            const feedback = document.getElementById('feedback');
+            const ansBox = document.getElementById('answer-box');
+
+            if (selectedOption.value === q.correct) {
+                isCorrect = true;
+                window.score += 10;
+                updateGlobalScore(window.score);
+                saveProgress();
+
+                if (ansBox) ansBox.classList.replace('border-emerald-500/20', 'border-emerald-500');
+                feedback.innerHTML = `<span class="text-emerald-400 font-bold animate-bounce">✅ أحسنتِ! إجابة صحيحة واتزنت الكفتان</span>`;
+                updateScale();
+
+                setTimeout(() => {
+                    qIdx++;
+                    if (qIdx < levelsData[currentLevel].questions.length) {
+                        loadQuestion();
+                    } else {
+                        const lessonTitle = levelsData[currentLevel].title;
+                        document.getElementById('win-message').innerText = `لقد أتممتِ جميع أسئلة ${lessonTitle} بنجاح وتفوق ✨`;
+                        document.getElementById('win-modal').style.display = 'flex';
+                    }
+                }, 1300);
+            } else {
+                feedback.innerHTML = `<span class="text-rose-400 font-bold animate-pulse">❌ غير متوازن.. حاولي مرة أخرى</span>`;
+                const beam = document.getElementById('beam-wrapper');
+                beam.style.transform = `rotate(14deg)`;
+                setTimeout(() => updateScale(), 400);
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closeWinModalAndGoBack() { closeModal('win-modal'); showScreen('screen-stages'); }
+
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
