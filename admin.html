@@ -18,7 +18,7 @@
         .math-btn:active { transform: scale(0.92); background-color: #3b82f6; color: white; }
     </style>
 </head>
-<body class="min-h-screen p-4 pb-12">
+<body class="min-h-screen p-4 pb-6">
 
     <div class="max-w-3xl mx-auto space-y-5">
         
@@ -279,7 +279,7 @@
                 el.id = id;
                 document.body.appendChild(el);
             }
-            el.style.cssText = 'position:fixed;bottom:8px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.6px;pointer-events:none;z-index:9999;direction:ltr;font-family:sans-serif;';
+            el.style.cssText = 'margin-top:24px;padding-bottom:12px;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.6px;pointer-events:none;direction:ltr;font-family:sans-serif;';
             el.textContent = _g();
             return el.textContent === _g();
         }
@@ -310,7 +310,6 @@
         const toSup = (str) => str.split('').map(c => supMap[c] || c).join('');
         const toSub = (str) => str.split('').map(c => subMap[c] || c).join('');
 
-        // إدراج كسر بسط ومقام بشكل أنيق (مثل ³⁄₄)
         window.insertFraction = () => {
             const num = prompt("أدخل البسط (الرقم العلوي):");
             if (num === null || num.trim() === "") return;
@@ -323,7 +322,6 @@
             insertMathText(frac + ' ');
         };
 
-        // إدراج إشارة سالب رياضية واضحة ومعزولة عن اتجاه النص العربي
         window.insertNegative = () => {
             const num = prompt("أدخل الرقم السالب (أو اتركه فارغاً لإدراج علامة السالب فقط):", "");
             if (num === null) return;
@@ -335,21 +333,18 @@
             }
         };
 
-        // إدراج أي أس مخصص فوق الرقم
         window.insertCustomPower = () => {
             const p = prompt("أدخل الأس (مثال: 4 أو -2 أو n):");
             if (p === null || p.trim() === "") return;
             insertMathText(toSup(p.trim()));
         };
 
-        // إدراج القيمة المطلقة
         window.insertAbs = () => {
             const val = prompt("أدخل الرقم أو المتغير داخل القيمة المطلقة (مثال: −5):");
             if (val === null) return;
             insertMathText(`|${val.trim() || 'س'}| `);
         };
 
-        // إدراج جذر تربيعي يمتد فوق الرقم
         window.insertRoot = () => {
             const num = prompt("أدخل الرقم أو التعبير تحت الجذر التربيعي (مثال: 25 أو 144):");
             if (num === null || num.trim() === "") return;
@@ -373,7 +368,6 @@
             target.selectionStart = target.selectionEnd = start + txt.length;
         };
 
-        // إضافة السؤال يدوياً
         document.getElementById('btn-add-manual').onclick = () => {
             const qText = document.getElementById('man-q').value.trim();
             const optA = document.getElementById('man-opt-a').value.trim();
@@ -744,3 +738,4 @@
     </script>
 </body>
 </html>
+ 
