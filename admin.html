@@ -53,6 +53,10 @@
                     <label class="block font-bold mb-1 text-slate-300">4. اسم المستودع</label>
                     <input type="text" id="cfg-gh-repo" class="input-field" dir="ltr" value="Balance-new">
                 </div>
+                <div class="md:col-span-2">
+                    <label class="block font-bold mb-1 text-slate-300">5. اسم النموذج (Model)</label>
+                    <input type="text" id="cfg-gemini-model" class="input-field" dir="ltr" value="gemini-3.8-flash">
+                </div>
             </div>
 
             <button type="button" id="btn-save-cfg" class="w-full py-2.5 rounded-xl bg-blue-600 font-bold text-xs text-white">حفظ الإعدادات ✅</button>
@@ -190,7 +194,8 @@
                 geminiKey: localStorage.getItem('mizan_gemini_key') || '',
                 ghToken: localStorage.getItem('mizan_gh_token') || '',
                 ghUser: localStorage.getItem('mizan_gh_user') || 'MathPlayZone',
-                ghRepo: localStorage.getItem('mizan_gh_repo') || 'Balance-new'
+                ghRepo: localStorage.getItem('mizan_gh_repo') || 'Balance-new',
+                geminiModel: localStorage.getItem('mizan_gemini_model') || 'gemini-3.8-flash'
             };
         }
 
@@ -200,6 +205,7 @@
             document.getElementById('cfg-gh-token').value = s.ghToken;
             document.getElementById('cfg-gh-user').value = s.ghUser;
             document.getElementById('cfg-gh-repo').value = s.ghRepo;
+            document.getElementById('cfg-gemini-model').value = s.geminiModel;
 
             if (s.geminiKey && s.ghToken && s.ghUser && s.ghRepo) {
                 document.getElementById('status-dot').classList.replace('bg-rose-500', 'bg-emerald-500');
@@ -215,6 +221,7 @@
             localStorage.setItem('mizan_gh_token', document.getElementById('cfg-gh-token').value.trim());
             localStorage.setItem('mizan_gh_user', document.getElementById('cfg-gh-user').value.trim() || 'MathPlayZone');
             localStorage.setItem('mizan_gh_repo', document.getElementById('cfg-gh-repo').value.trim() || 'Balance-new');
+            localStorage.setItem('mizan_gemini_model', document.getElementById('cfg-gemini-model').value.trim() || 'gemini-3.8-flash');
             loadSettings();
             alert("تم حفظ الإعدادات!");
         };
@@ -324,64 +331,56 @@
             }
         };
 
-        async function fetchWithTimeout(url, options, timeout = 15000) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            try {
-                const response = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(id);
-                return response;
-            } catch (e) {
-                clearTimeout(id);
-                throw e;
-            }
-        }
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        async function callFastGemini(apiKey, prompt) {
-            const models = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-            let lastErr = '';
-
-            for (const model of models) {
+        async function callGeminiWithRetry(apiKey, model, prompt, statusEl) {
+            const maxAttempts = 3;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    const res = await fetchWithTimeout(
-                        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ parts: [{ text: prompt }] }],
-                                generationConfig: {
-                                    responseMimeType: "application/json",
-                                    responseSchema: {
-                                        type: "ARRAY",
-                                        items: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                q: { type: "STRING" }, mini: { type: "STRING" },
-                                                options: {
-                                                    type: "ARRAY",
-                                                    items: {
-                                                        type: "OBJECT",
-                                                        properties: { key: { type: "STRING" }, text: { type: "STRING" }, panText: { type: "STRING" }, value: { type: "STRING" } },
-                                                        required: ["key", "text", "panText", "value"]
-                                                    }
-                                                },
-                                                correct: { type: "STRING" }
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            q: { type: "STRING" }, mini: { type: "STRING" },
+                                            options: {
+                                                type: "ARRAY",
+                                                items: {
+                                                    type: "OBJECT",
+                                                    properties: { key: { type: "STRING" }, text: { type: "STRING" }, panText: { type: "STRING" }, value: { type: "STRING" } },
+                                                    required: ["key", "text", "panText", "value"]
+                                                }
                                             },
-                                            required: ["q", "mini", "options", "correct"]
-                                        }
+                                            correct: { type: "STRING" }
+                                        },
+                                        required: ["q", "mini", "options", "correct"]
                                     }
                                 }
-                            })
-                        },
-                        15000
-                    );
+                            }
+                        })
+                    });
                     const data = await res.json();
-                    if (data.error) { lastErr = data.error.message; continue; }
+                    if (data.error) {
+                        if (attempt < maxAttempts && (data.error.code === 503 || data.error.code === 429 || data.error.message.includes('demand'))) {
+                            statusEl.innerText = `⏳ ضغط مؤقت على السيرفر.. إعادة المحاولة (${attempt}/${maxAttempts})...`;
+                            await sleep(2500);
+                            continue;
+                        }
+                        throw new Error(data.error.message);
+                    }
                     return JSON.parse(data.candidates[0].content.parts[0].text);
-                } catch (e) { lastErr = e.message; }
+                } catch (e) {
+                    if (attempt === maxAttempts) throw e;
+                    await sleep(2000);
+                }
             }
-            throw new Error(lastErr || "تعذر الاتصال السريع، تأكد من صحة مفتاح Gemini.");
         }
 
         document.getElementById('btn-generate-ai').onclick = async () => {
@@ -393,12 +392,12 @@
             const btn = document.getElementById('btn-generate-ai');
             const status = document.getElementById('ai-status');
             btn.disabled = true;
-            status.innerText = "⚡ جاري الفرز السريع...";
+            status.innerText = "⚡ جاري الفرز...";
 
             const prompt = `حول النص التالي إلى مصفوفة JSON لأسئلة لعبة تعليمية. لكل سؤال: q (السؤال)، mini (عنوان قصير للكفة كلمتين)، options (4 خيارات: key أ/ب/ج/د، text النص الكامل، panText اختصار كلمتين، value a/b/c/d)، و correct (a أو b أو c أو d).\nالنص:\n${rawText}`;
 
             try {
-                const generated = await callFastGemini(s.geminiKey, prompt);
+                const generated = await callGeminiWithRetry(s.geminiKey, s.geminiModel, prompt, status);
                 projectData.levels[activeLessonId].questions.push(...generated);
                 document.getElementById('raw-questions-input').value = '';
                 status.innerText = `✅ تمت إضافة ${generated.length} سؤالاً!`;
@@ -490,3 +489,4 @@
     </script>
 </body>
 </html>
+ 
