@@ -241,8 +241,8 @@
             <!-- قائمة الأسئلة الجاهزة -->
             <div class="space-y-2 pt-2 border-t border-white/5">
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-bold text-slate-300">الأسئلة الجاهزة في هذا الدرس (<span id="questions-count">0</span>):</span>
-                    <button type="button" id="btn-clear-q" class="text-rose-400">مسح الكل</button>
+                    <span class="font-bold text-slate-300">الأسئلة الجاهزة في هذا الدرس (<span id="questions-count">0</span>) <span class="text-[10px] text-slate-400 font-normal">- اضغط على أي خيار لتحديده كإجابة صحيحة</span>:</span>
+                    <button type="button" id="btn-clear-q" class="text-rose-400 shrink-0">مسح الكل</button>
                 </div>
                 <div id="questions-preview-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
             </div>
@@ -367,6 +367,41 @@
             target.focus();
             target.selectionStart = target.selectionEnd = start + txt.length;
         };
+
+        // توحيد وتصحيح بيانات الأسئلة القادمة من أي نموذج ذكاء اصطناعي
+        function normalizeQuestions(rawList) {
+            const keysAr = ['أ', 'ب', 'ج', 'د'];
+            const valsEn = ['a', 'b', 'c', 'd'];
+            const arToEn = { 'أ': 'a', 'ا': 'a', 'ب': 'b', 'ج': 'c', 'د': 'd' };
+
+            return rawList.map(item => {
+                const opts = (item.options || []).slice(0, 4).map((o, idx) => {
+                    const cleanText = (o.text || '').replace(/[✅✔]/g, '').trim();
+                    const cleanPan = (o.panText || cleanText.split(' ').slice(0, 3).join(' ')).replace(/[✅✔]/g, '').trim();
+                    return {
+                        key: keysAr[idx] || o.key,
+                        text: cleanText,
+                        panText: cleanPan,
+                        value: valsEn[idx]
+                    };
+                });
+
+                let corr = String(item.correct || '').trim().toLowerCase();
+                if (arToEn[corr]) corr = arToEn[corr];
+                if (!valsEn.includes(corr)) {
+                    // محاولة مطابقة النص إذا أرجع النموذج نص الإجابة بدل الحرف
+                    const foundIdx = opts.findIndex(o => o.text === corr || corr.includes(o.text));
+                    corr = foundIdx >= 0 ? valsEn[foundIdx] : 'a';
+                }
+
+                return {
+                    q: (item.q || '').trim(),
+                    mini: (item.mini || (item.q || '').split(' ').slice(0, 2).join('<br>')).trim(),
+                    options: opts,
+                    correct: corr
+                };
+            });
+        }
 
         document.getElementById('btn-add-manual').onclick = () => {
             const qText = document.getElementById('man-q').value.trim();
@@ -597,9 +632,10 @@
             const status = document.getElementById('ai-status');
             btn.disabled = true;
 
-            const systemMsg = `أنت مساعد برمجي. حول النص التالي إلى مصفوفة JSON صالحة فقط بدون أي مقدمات أو شروحات أو علامات markdown. إذا وجدت جذراً تربيعياً مثل جذر 25 فاكتبه بصيغة √25̅، وإذا وجدت كسراً مثل 3/4 فاكتبه بصيغة ³⁄₄، والأعداد السالبة بصيغة −5.
+            const systemMsg = `أنت مساعد برمجي. حول النص التالي إلى مصفوفة JSON صالحة فقط بدون أي مقدمات أو شروحات أو علامات markdown.
+مهم جداً: حقل "correct" يجب أن يكون حرفاً إنجليزياً صغيراً فقط ("a" أو "b" أو "c" أو "d") يطابق الخيار الذي بجانبه علامة ✅ أو الصحيح علمياً.
 الهيكل المطلوب:
-[{"q":"نص السؤال","mini":"عنوان قصير كلمتين للكفة","options":[{"key":"أ","text":"الخيار الأول","panText":"اختصار كلمتين","value":"a"},{"key":"ب","text":"الخيار الثاني","panText":"اختصار كلمتين","value":"b"},{"key":"ج","text":"الخيار الثالث","panText":"اختصار كلمتين","value":"c"},{"key":"د","text":"الخيار الرابع","panText":"اختصار كلمتين","value":"d"}],"correct":"a"}]`;
+[{"q":"نص السؤال","mini":"عنوان قصير كلمتين للكفة","options":[{"key":"أ","text":"الخيار الأول","panText":"اختصار كلمتين","value":"a"},{"key":"ب","text":"الخيار الثاني","panText":"اختصار كلمتين","value":"b"},{"key":"ج","text":"الخيار الثالث","panText":"اختصار كلمتين","value":"c"},{"key":"د","text":"الخيار الرابع","panText":"اختصار كلمتين","value":"d"}],"correct":"b"}]`;
 
             const fallbackModels = [
                 CONFIG.orModel,
@@ -641,7 +677,8 @@
                     const jsonMatch = content.match(/\[[\s\S]*\]/);
                     if (!jsonMatch) throw new Error("تنسيق غير صالح");
 
-                    const generated = JSON.parse(jsonMatch[0]);
+                    const parsedRaw = JSON.parse(jsonMatch[0]);
+                    const generated = normalizeQuestions(parsedRaw);
                     projectData.levels[activeLessonId].questions.push(...generated);
                     document.getElementById('raw-questions-input').value = '';
                     status.innerText = `✅ تمت إضافة ${generated.length} سؤالاً بنجاح!`;
@@ -655,6 +692,11 @@
 
             status.innerText = `❌ تعذر الفرز حالياً: ${lastError}`;
             btn.disabled = false;
+        };
+
+        window.setCorrectOpt = (qIndex, val) => {
+            projectData.levels[activeLessonId].questions[qIndex].correct = val;
+            renderQuestionsList();
         };
 
         function renderQuestionsList() {
@@ -672,7 +714,7 @@
                         <button type="button" onclick="delQ(${i})" class="text-rose-400 text-[11px]">حذف</button>
                     </div>
                     <div class="grid grid-cols-2 gap-1 text-[11px]">
-                        ${item.options.map(o => `<div class="px-2 py-0.5 rounded ${o.value === item.correct ? 'bg-emerald-950/70 text-emerald-300 font-bold' : 'bg-white/5 text-slate-400'}">${o.key}) ${o.text}</div>`).join('')}
+                        ${item.options.map(o => `<div onclick="setCorrectOpt(${i}, '${o.value}')" class="cursor-pointer px-2 py-1 rounded transition ${o.value === item.correct ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold' : 'bg-white/5 text-slate-400 hover:bg-white/10'}">${o.key}) ${o.text}</div>`).join('')}
                     </div>
                 </div>
             `).join('');
@@ -738,4 +780,3 @@
     </script>
 </body>
 </html>
- 
