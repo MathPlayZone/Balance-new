@@ -107,11 +107,11 @@
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">الصف والفصل الدراسي:</label>
-                    <input type="text" id="proj-grade" class="input-field" placeholder="مثال: الصف الثاني متوسط - الترم الأول">
+                    <input type="text" id="proj-grade" class="input-field" placeholder="أدخل الصف والفصل الدراسي...">
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">اسم المعلمة / المعلم:</label>
-                    <input type="text" id="proj-teacher" class="input-field" placeholder="مثال: أ. أسماء رشيد الرشيد">
+                    <input type="text" id="proj-teacher" class="input-field" placeholder="أدخل اسم المعلم / المعلمة...">
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-slate-300">اللون الافتراضي:</label>
@@ -389,7 +389,6 @@
                 let corr = String(item.correct || '').trim().toLowerCase();
                 if (arToEn[corr]) corr = arToEn[corr];
                 if (!valsEn.includes(corr)) {
-                    // محاولة مطابقة النص إذا أرجع النموذج نص الإجابة بدل الحرف
                     const foundIdx = opts.findIndex(o => o.text === corr || corr.includes(o.text));
                     corr = foundIdx >= 0 ? valsEn[foundIdx] : 'a';
                 }
@@ -690,7 +689,10 @@
                 }
             }
 
-            status.innerText = `❌ تعذر الفرز حالياً: ${lastError}`;
+            const isLimit = /limit|quota|429|exceeded/i.test(lastError);
+            status.innerText = isLimit 
+                ? "⚠️ وصلت للحد المجاني اليومي، يتجدد تلقائياً بعد 24 ساعة (تقدر تكمل الإضافة يدوياً بالأسفل)." 
+                : "❌ تعذر الفرز حالياً (ضغط مؤقت على السيرفر، حاول بعد قليل أو أضف السؤال يدوياً).";
             btn.disabled = false;
         };
 
